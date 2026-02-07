@@ -407,4 +407,37 @@ contract VortexAgent is ERC721, IUnlockCallback {
     function totalSupply() public view returns (uint256) {
         return _nextTokenId;
     }
+
+    /// @notice Number of liquidity ranges for a position (for interactive/script use).
+    function getRangeCount(uint256 tokenId) public view returns (uint256) {
+        return _positionTrees[tokenId].size();
+    }
+
+    /// @notice Get all liquidity ranges for a position (tickLower, tickUpper, liquidity per range).
+    /// @param tokenId Position NFT id.
+    /// @return tickLowers Lower tick of each range.
+    /// @return tickUppers Upper tick of each range.
+    /// @return liquidities Liquidity in each range.
+    function getRanges(uint256 tokenId)
+        public
+        view
+        returns (int24[] memory tickLowers, int24[] memory tickUppers, int256[] memory liquidities)
+    {
+        RedBlackTreeLib.Tree storage tree = _positionTrees[tokenId];
+        uint256 n = tree.size();
+        tickLowers = new int24[](n);
+        tickUppers = new int24[](n);
+        liquidities = new int256[](n);
+        uint256 i;
+        for (bytes32 ptr = tree.first(); !RedBlackTreeLib.isEmpty(ptr); ptr = RedBlackTreeLib.next(ptr)) {
+            uint256 encLower = RedBlackTreeLib.value(ptr);
+            RangeInfo storage info = _rangeInfo[tokenId][encLower];
+            tickLowers[i] = _decodeTick(encLower);
+            tickUppers[i] = _decodeTick(info.encodedTickUpper);
+            liquidities[i] = info.liquidity;
+            unchecked {
+                ++i;
+            }
+        }
+    }
 }
