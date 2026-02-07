@@ -57,3 +57,6 @@ venv/
 *.tgz
 *.tar.gz
 .turbo/
+
+# Testnet usage guide (local / per-env; do not commit)
+docs/testnet-usage.md
