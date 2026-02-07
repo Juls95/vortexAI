@@ -1,0 +1,38 @@
+Stack and Technologies
+
+Smart Contracts: Solidity ^0.8.20 + Foundry (for testing, deployment, and scripting)
+Libraries: Solady (for Red-Black Tree, ERC721, and utilities) + Uniswap v4-core (for PoolManager and core logic) + Uniswap v4-periphery (for position management and hooks)
+Integrations: Chainlink oracles for price feeds + Keeper networks (e.g., Gelato or Chainlink Automation) for agentic triggers
+Always use custom errors instead of require/revert strings for gas efficiency
+Prefer composition (e.g., libraries and hooks) over inheritance
+Nomenclature: camelCase for variables and functions, PascalCase for contracts, interfaces, structs, and enums
+
+Folder Structure
+
+src/ → core smart contracts
+VortexAgent.sol → main position manager contract with agentic rebalance logic
+OptionalHook.sol → optional Uniswap v4 hook for dynamic fees and modifications
+
+test/ → Foundry test suites
+VortexAgent.t.sol → unit and integration tests for multi-range positions and rebalancing
+
+script/ → deployment and interaction scripts
+DeployVortexAgent.s.sol → script for deploying to testnets like Sepolia
+
+lib/ → external libraries (installed via Foundry)
+solady/ → Red-Black Tree and ERC721 implementations
+v4-core/ → Uniswap v4 core contracts
+v4-periphery/ → Uniswap v4 periphery contracts
+
+
+Code Rules
+
+Always use explicit types and avoid implicit conversions (e.g., no unchecked math unless justified)
+Use early returns for better readability and gas optimization
+Functional-style contracts with modifiers and hooks, never use fallback functions unless critical
+Include NatSpec documentation for all public/external functions and contracts
+Handle negative ticks with offset (e.g., 887273) as per Uniswap v4 conventions
+Use atomic operations via PoolManager.unlock for batch modifications
+Commits in English, format conventional commits (e.g., feat: add rebalance function)
+Dependencies installed via Foundry (e.g., forge install Vectorized/solady Uniswap/v4-core)
+Testing: Use forge-std/Test.sol for mocks and assertions; aim for 100% coverage on core logic
