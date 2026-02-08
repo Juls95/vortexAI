@@ -9,6 +9,7 @@ import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {BalanceDelta, BalanceDeltaLibrary} from "v4-core/types/BalanceDelta.sol";
 import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/types/PoolId.sol";
+import {IERC20Minimal} from "v4-core/interfaces/external/IERC20Minimal.sol";
 
 /// @title VortexAgent
 /// @notice Multi-range Uniswap v4 position manager: one ERC721 NFT holds multiple liquidity ranges.
@@ -73,6 +74,7 @@ contract VortexAgent is ERC721, IUnlockCallback {
     error PoolKeyMismatch();
     error PositionNotInitialized();
     error ZeroLiquidity();
+    error InsufficientCurrency();
 
     constructor(address _poolManager) {
         if (_poolManager == address(0)) revert();
@@ -209,7 +211,7 @@ contract VortexAgent is ERC721, IUnlockCallback {
                 }),
                 ud.hookData
             );
-            _accumulateAndSettle(ud.key, delta);
+            _accumulateAndSettle(ud.key, delta, _ownerOf(ud.tokenId));
         }
         return "";
     }
@@ -376,22 +378,39 @@ contract VortexAgent is ERC721, IUnlockCallback {
     }
 
     /// @dev Settle or take for one delta so PoolManager sees zero net delta for this call.
-    function _accumulateAndSettle(PoolKey memory key, BalanceDelta delta) internal {
+    ///      When the contract owes the pool (negative delta), pulls from `owner` then transfers to PoolManager.
+    ///      Owner must have approved VortexAgent for ERC20s; for native currency, owner must send ETH with the call.
+    function _accumulateAndSettle(PoolKey memory key, BalanceDelta delta, address owner) internal {
         int128 a0 = delta.amount0();
         int128 a1 = delta.amount1();
         if (a0 > 0) {
             poolManager.take(key.currency0, address(this), uint128(a0));
         } else if (a0 < 0) {
+            uint256 amount0 = uint256(uint128(-a0));
+            _pullCurrency(key.currency0, owner, amount0);
             poolManager.sync(key.currency0);
-            key.currency0.transfer(address(poolManager), uint128(-a0));
+            key.currency0.transfer(address(poolManager), amount0);
             poolManager.settle();
         }
         if (a1 > 0) {
             poolManager.take(key.currency1, address(this), uint128(a1));
         } else if (a1 < 0) {
+            uint256 amount1 = uint256(uint128(-a1));
+            _pullCurrency(key.currency1, owner, amount1);
             poolManager.sync(key.currency1);
-            key.currency1.transfer(address(poolManager), uint128(-a1));
+            key.currency1.transfer(address(poolManager), amount1);
             poolManager.settle();
+        }
+    }
+
+    /// @dev Pull currency from `from` to this contract (for settling). ERC20: transferFrom; native: user must send ETH with addLiquidity.
+    function _pullCurrency(Currency currency, address from, uint256 amount) internal {
+        if (currency.isAddressZero()) {
+            // ETH must have been sent with addLiquidity; we are in unlockCallback so msg.value is 0
+            if (address(this).balance < amount) revert InsufficientCurrency();
+        } else {
+            bool success = IERC20Minimal(Currency.unwrap(currency)).transferFrom(from, address(this), amount);
+            if (!success) revert InsufficientCurrency();
         }
     }
 
