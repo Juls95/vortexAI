@@ -30,8 +30,8 @@ import {BalanceDelta, BalanceDeltaLibrary} from "v4-core/types/BalanceDelta.sol"
 //   POOL_MANAGER     = (deploy mock if unset)
 //   VORTEX_AGENT     = (deploy if unset)
 //   USER             = msg.sender / 0xBEEF in sim
-//   TICK_LOWER_1     = -1000
-//   TICK_UPPER_1     = 1000
+//   TICK_LOWER_1     = -1020   (must be multiple of TICK_SPACING, e.g. 60)
+//   TICK_UPPER_1     = 1020
 //   LIQUIDITY_1      = 1e18
 //   TICK_LOWER_2     = (skip second range if unset)
 //   TICK_UPPER_2     =
@@ -46,8 +46,8 @@ contract InteractiveVortexAgentScript is Script {
     using PoolIdLibrary for PoolKey;
 
     function run() public {
-        int24 tickLower1 = int24(vm.envOr("TICK_LOWER_1", int256(-1000)));
-        int24 tickUpper1 = int24(vm.envOr("TICK_UPPER_1", int256(1000)));
+        int24 tickLower1 = int24(vm.envOr("TICK_LOWER_1", int256(-1020)));
+        int24 tickUpper1 = int24(vm.envOr("TICK_UPPER_1", int256(1020)));
         int256 liquidity1 = int256(vm.envOr("LIQUIDITY_1", uint256(1e18)));
         int24 tickLower2 = int24(vm.envOr("TICK_LOWER_2", int256(0)));   // 0 = skip
         int24 tickUpper2 = int24(vm.envOr("TICK_UPPER_2", int256(0)));
